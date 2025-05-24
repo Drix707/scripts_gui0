@@ -52,14 +52,104 @@ local function updateTabs()
     end
     
     -- Создаем контент для текущей вкладки
-    if currentTab == "Главная" then
-        local label = Instance.new("TextLabel")
-        label.Text = "Добро пожаловать в главное меню!\n\nИспользуйте вкладки для навигации"
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        label.BackgroundTransparency = 1
-        label.TextWrapped = true
-        label.Parent = tabContent
+-- Добавляем этот код в раздел создания вкладки "GUI SETTINGS"
+if currentTab == "Главная" then
+    local settingsFrame = Instance.new("Frame")
+    settingsFrame.Size = UDim2.new(1, 0, 1, 0)
+    settingsFrame.BackgroundTransparency = 1
+    settingsFrame.Parent = tabContent
+    
+    -- Текст "Настройки скорости"
+    local speedLabel = Instance.new("TextLabel")
+    speedLabel.Text = "Настройки скорости:"
+    speedLabel.Size = UDim2.new(1, 0, 0, 20)
+    speedLabel.Position = UDim2.new(0, 0, 0, 10)
+    speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedLabel.BackgroundTransparency = 1
+    speedLabel.Font = Enum.Font.SourceSansSemibold
+    speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+    speedLabel.Parent = settingsFrame
+
+    -- Слайдер скорости (полная версия)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, -20, 0, 25)
+    sliderFrame.Position = UDim2.new(0, 10, 0, 40)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    sliderFrame.BorderSizePixel = 0
+    sliderFrame.Parent = settingsFrame
+
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- Начальное значение 50%
+    sliderFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderFrame
+
+    local sliderText = Instance.new("TextLabel")
+    sliderText.Text = "50%"
+    sliderText.Size = UDim2.new(1, 0, 1, 0)
+    sliderText.BackgroundTransparency = 1
+    sliderText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sliderText.Parent = sliderFrame
+
+    -- Логика слайдера
+    local isDragging = false
+    local minSpeed, maxSpeed = 16, 100 -- Минимальная и максимальная скорость
+
+    -- Функция обновления скорости
+    local function updateSpeed(speedPercent)
+        local speed = minSpeed + (maxSpeed - minSpeed) * speedPercent
+        sliderText.Text = math.floor(speed) .. "%"
+        
+        -- Применяем к персонажу
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = speed
+            end
+        end
+    end
+
+    -- Обработчики для перетаскивания
+    sliderFill.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = true
+        end
+    end)
+
+    game:GetService("UserInputService").InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = false
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mouseX = input.Position.X
+            local sliderStart = sliderFrame.AbsolutePosition.X
+            local sliderWidth = sliderFrame.AbsoluteSize.X
+            local sliderPos = math.clamp((mouseX - sliderStart) / sliderWidth, 0, 1)
+            
+            sliderFill.Size = UDim2.new(sliderPos, 0, 1, 0)
+            updateSpeed(sliderPos)
+        end
+    end)
+
+    -- Кнопка сброса
+    local resetButton = Instance.new("TextButton")
+    resetButton.Text = "Сбросить скорость"
+    resetButton.Size = UDim2.new(1, -20, 0, 25)
+    resetButton.Position = UDim2.new(0, 10, 0, 75)
+    resetButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    resetButton.Parent = settingsFrame
+
+    resetButton.MouseButton1Click:Connect(function()
+        sliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- 50%
+        updateSpeed(0.5)
+    end)
+
+    return settingsFrame
         
     elseif currentTab == "Инфо" then
         local label = Instance.new("TextLabel")
