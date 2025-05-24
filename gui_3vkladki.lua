@@ -58,8 +58,8 @@ if currentTab == "Главная" then
     settingsFrame.Size = UDim2.new(1, 0, 1, 0)
     settingsFrame.BackgroundTransparency = 1
     settingsFrame.Parent = tabContent
-    
-    -- Текст "Настройки скорости"
+
+    -- Заголовок
     local speedLabel = Instance.new("TextLabel")
     speedLabel.Text = "Настройки скорости:"
     speedLabel.Size = UDim2.new(1, 0, 0, 20)
@@ -70,50 +70,71 @@ if currentTab == "Главная" then
     speedLabel.TextXAlignment = Enum.TextXAlignment.Left
     speedLabel.Parent = settingsFrame
 
-    -- Слайдер скорости (полная версия)
+    -- Контейнер слайдера (фиксирует баг с перемещением GUI)
+    local sliderContainer = Instance.new("Frame")
+    sliderContainer.Size = UDim2.new(1, -20, 0, 30)
+    sliderContainer.Position = UDim2.new(0, 10, 0, 40)
+    sliderContainer.BackgroundTransparency = 1
+    sliderContainer.Parent = settingsFrame
+
+    -- Фон слайдера
     local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(1, -20, 0, 25)
-    sliderFrame.Position = UDim2.new(0, 10, 0, 40)
+    sliderFrame.Size = UDim2.new(1, 0, 0, 10)
+    sliderFrame.Position = UDim2.new(0, 0, 0, 10)
     sliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
     sliderFrame.BorderSizePixel = 0
-    sliderFrame.Parent = settingsFrame
+    sliderFrame.Parent = sliderContainer
 
-    local sliderFill = Instance.new("Frame")
-    sliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- Начальное значение 50%
-    sliderFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    sliderFill.BorderSizePixel = 0
-    sliderFill.Parent = sliderFrame
+    -- Ползунок (круглый для красоты)
+    local sliderButton = Instance.new("TextButton")
+    sliderButton.Size = UDim2.new(0, 20, 0, 20)
+    sliderButton.Position = UDim2.new(0.5, -10, 0, 0) -- Начальная позиция 50%
+    sliderButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    sliderButton.Text = ""
+    sliderButton.AutoButtonColor = false
+    sliderButton.Parent = sliderContainer
 
+    -- Скругление (если executor поддерживает UICorner)
+    pcall(function()
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = sliderButton
+    end)
+
+    -- Текст значения
     local sliderText = Instance.new("TextLabel")
     sliderText.Text = "50%"
-    sliderText.Size = UDim2.new(1, 0, 1, 0)
+    sliderText.Size = UDim2.new(1, 0, 0, 20)
+    sliderText.Position = UDim2.new(0, 0, 0, -5)
     sliderText.BackgroundTransparency = 1
     sliderText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    sliderText.Parent = sliderFrame
+    sliderText.Parent = sliderContainer
 
-    -- Логика слайдера
-    local isDragging = false
-    local minSpeed, maxSpeed = 16, 100 -- Минимальная и максимальная скорость
+    -- Настройки скорости
+    local minSpeed, maxSpeed = 16, 100
+    local defaultSpeed = 0.5 -- 50%
 
     -- Функция обновления скорости
-    local function updateSpeed(speedPercent)
-        local speed = minSpeed + (maxSpeed - minSpeed) * speedPercent
+    local function updateSpeed(sliderPercent)
+        local speed = minSpeed + (maxSpeed - minSpeed) * sliderPercent
         sliderText.Text = math.floor(speed) .. "%"
         
         -- Применяем к персонажу
-        local character = game.Players.LocalPlayer.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = speed
-            end
+        local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = speed
         end
     end
 
-    -- Обработчики для перетаскивания
-    sliderFill.InputBegan:Connect(function(input)
+    -- Перетаскивание ползунка (теперь без багов)
+    local isDragging = false
+    local startX, startPosX
+
+    sliderButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDragging = true
+            startX = input.Position.X
+            startPosX = sliderButton.Position.X.Offset
         end
     end)
 
@@ -125,29 +146,31 @@ if currentTab == "Главная" then
 
     game:GetService("UserInputService").InputChanged:Connect(function(input)
         if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mouseX = input.Position.X
-            local sliderStart = sliderFrame.AbsolutePosition.X
-            local sliderWidth = sliderFrame.AbsoluteSize.X
-            local sliderPos = math.clamp((mouseX - sliderStart) / sliderWidth, 0, 1)
+            local deltaX = input.Position.X - startX
+            local newPos = math.clamp(startPosX + deltaX, 0, sliderFrame.AbsoluteSize.X - 20)
             
-            sliderFill.Size = UDim2.new(sliderPos, 0, 1, 0)
-            updateSpeed(sliderPos)
+            sliderButton.Position = UDim2.new(0, newPos, 0, 0)
+            local percent = newPos / (sliderFrame.AbsoluteSize.X - 20)
+            updateSpeed(percent)
         end
     end)
 
-    -- Кнопка сброса
+    -- Кнопка сброса (теперь точно 50%)
     local resetButton = Instance.new("TextButton")
-    resetButton.Text = "Сбросить скорость"
+    resetButton.Text = "Сбросить (50%)"
     resetButton.Size = UDim2.new(1, -20, 0, 25)
-    resetButton.Position = UDim2.new(0, 10, 0, 75)
+    resetButton.Position = UDim2.new(0, 10, 0, 80)
     resetButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     resetButton.Parent = settingsFrame
 
     resetButton.MouseButton1Click:Connect(function()
-        sliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- 50%
-        updateSpeed(0.5)
+        sliderButton.Position = UDim2.new(0.5, -10, 0, 0)
+        updateSpeed(defaultSpeed)
     end)
+
+    -- Инициализация
+    updateSpeed(defaultSpeed)
 
     return settingsFrame
         
