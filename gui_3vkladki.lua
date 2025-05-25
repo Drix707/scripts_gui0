@@ -24,7 +24,7 @@ title.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 title.Parent = mainFrame
 
 -- Вкладки
-local tabs = {"Главная", "Инфо", "GUI SETTINGS"}
+local tabs = {"Главная", "Aimbot" "Инфо", "GUI SETTINGS"}
 local currentTab = "Главная"
 
 local tabButtons = {}
@@ -173,6 +173,133 @@ if currentTab == "Главная" then
     updateSpeed(defaultSpeed)
 
     return settingsFrame
+
+    -- Добавьте этот код в любую вкладку (например, "Aimbot")
+elseif currentTab == "Aimbot" then
+    local aimbotFrame = Instance.new("Frame")
+    aimbotFrame.Size = UDim2.new(1, 0, 1, 0)
+    aimbotFrame.BackgroundTransparency = 1
+    aimbotFrame.Parent = tabContent
+
+    -- Настройки
+    local aimbotEnabled = false
+    local showTracer = true
+    local aimKey = Enum.UserInputType.MouseButton2 -- ПКМ для прицеливания
+    local smoothness = 0.2 -- Плавность (чем меньше, тем резче)
+
+    -- Tracer (линия)
+    local tracer = Instance.new("Part")
+    tracer.Size = Vector3.new(0.1, 0.1, 1000)
+    tracer.Anchored = true
+    tracer.CanCollide = false
+    tracer.Transparency = 0.7
+    tracer.Color = Color3.fromRGB(255, 0, 0)
+    tracer.Material = Enum.Material.Neon
+    tracer.Parent = workspace.CurrentCamera
+    tracer.Visible = false
+
+    -- Визуальные элементы GUI
+    local toggleAimbot = Instance.new("TextButton")
+    toggleAimbot.Text = "Aimbot: OFF"
+    toggleAimbot.Size = UDim2.new(0.8, 0, 0, 30)
+    toggleAimbot.Position = UDim2.new(0.1, 0, 0, 10)
+    toggleAimbot.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    toggleAimbot.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleAimbot.Parent = aimbotFrame
+
+    local toggleTracer = Instance.new("TextButton")
+    toggleTracer.Text = "Tracer: ON"
+    toggleTracer.Size = UDim2.new(0.8, 0, 0, 30)
+    toggleTracer.Position = UDim2.new(0.1, 0, 0, 50)
+    toggleTracer.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    toggleTracer.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleTracer.Parent = aimbotFrame
+
+    -- Функция для поиска ближайшего игрока
+    local function getClosestPlayer()
+        local closestPlayer = nil
+        local minDistance = math.huge
+        local localPlayer = game:GetService("Players").LocalPlayer
+        local camera = workspace.CurrentCamera
+
+        for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+            if player ~= localPlayer and player.Character then
+                local head = player.Character:FindFirstChild("Head")
+                if head then
+                    local distance = (head.Position - camera.CFrame.Position).Magnitude
+                    if distance < minDistance then
+                        closestPlayer = player
+                        minDistance = distance
+                    end
+                end
+            end
+        end
+
+        return closestPlayer
+    end
+
+    -- Плавное наведение
+    local function smoothAim(targetPos)
+        local camera = workspace.CurrentCamera
+        local currentCFrame = camera.CFrame
+        local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPos)
+        
+        -- Плавный переход
+        camera.CFrame = currentCFrame:Lerp(targetCFrame, smoothness)
+    end
+
+    -- Обработчик ввода
+    game:GetService("UserInputService").InputBegan:Connect(function(input, _)
+        if input.UserInputType == aimKey then
+            aimbotEnabled = true
+            toggleAimbot.Text = "Aimbot: ON"
+            
+            -- Поиск цели
+            local target = getClosestPlayer()
+            if target and target.Character then
+                local head = target.Character:FindFirstChild("Head")
+                if head then
+                    -- Tracer
+                    if showTracer then
+                        tracer.Visible = true
+                        local startPos = workspace.CurrentCamera.CFrame.Position
+                        tracer.CFrame = CFrame.new(startPos, head.Position) * CFrame.new(0, 0, - (startPos - head.Position).Magnitude / 2)
+                        tracer.Size = Vector3.new(0.1, 0.1, (startPos - head.Position).Magnitude)
+                    end
+                    
+                    -- Плавный Aimbot
+                    while aimbotEnabled and target.Character and head do
+                        smoothAim(head.Position)
+                        task.wait()
+                    end
+                end
+            end
+        end
+    end)
+
+    game:GetService("UserInputService").InputEnded:Connect(function(input, _)
+        if input.UserInputType == aimKey then
+            aimbotEnabled = false
+            toggleAimbot.Text = "Aimbot: OFF"
+            tracer.Visible = false
+        end
+    end)
+
+    -- Кнопки управления
+    toggleAimbot.MouseButton1Click:Connect(function()
+        aimbotEnabled = not aimbotEnabled
+        toggleAimbot.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+        tracer.Visible = aimbotEnabled and showTracer
+    end)
+
+    toggleTracer.MouseButton1Click:Connect(function()
+        showTracer = not showTracer
+        toggleTracer.Text = "Tracer: " .. (showTracer and "ON" or "OFF")
+        tracer.Visible = aimbotEnabled and showTracer
+    end)
+
+    return aimbotFrame
+
         
     elseif currentTab == "Инфо" then
         local label = Instance.new("TextLabel")
